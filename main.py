@@ -1,23 +1,22 @@
-import math
-from random import random
-import numpy
 import numpy as np
 import shapely
+import matplotlib.pyplot as plt
 from shapely.geometry import LineString
-import warnings
+from shapely.geometry import Point
 
-"""
-Istruzioni
-Il lavoro sarà oggetto di discussione durante l’esame orale e dovrà essere sottomesso almeno 48 ore prima dell’esame, includendo:
-1. Sorgenti e materiale sviluppato in autonomia (senza includere datasets o librerie sviluppate da altri: basta fornire un link);
-2. Un file README che spieghi il ruolo di ciascun file sorgente e la sequenza di comandi che permette di riprodurre i risultati sottomessi.
-3. Una breve relazione (massimo 4 pagine in formato pdf) che descriva il lavoro e analizzi i risultati sperimentali. Non è necessario
-ripetere in dettaglio i contenuti del libro di testo o di eventuali articoli, è invece necessario che vengano fornite informazioni
-sufficienti a riprodurre il metodo utilizzato ed i risultati ottenuti. Eventuali porzioni riprese da altre fonti devono essere evidenziate
-con le relative citazioni.
-La sottomissione va effettuata preferibilmente creando un repository privato su codeberg con Project name “Nome Cognome” e condividendolo con l’utente ai-unifi (da project information->members->invite members). In alternativa, è accettabile inviare
-per email a ai.unifi@pm.me un singolo file zip (di dimensioni non superiori ad 1MB); tale file deve contenere solo i sorgenti e la
-relazione in pdf (senza altri files binari).
+"""Istruzioni:
+Il lavoro sarà oggetto di discussione durante l’esame orale e dovrà essere sottomesso almeno 48 ore 
+prima dell’esame, includendo: 1. Sorgenti e materiale sviluppato in autonomia (senza includere datasets o librerie 
+sviluppate da altri: basta fornire un link); 2. Un file README che spieghi il ruolo di ciascun file sorgente e la 
+sequenza di comandi che permette di riprodurre i risultati sottomessi. 3. Una breve relazione (massimo 4 pagine in 
+formato pdf) che descriva il lavoro e analizzi i risultati sperimentali. Non è necessario ripetere in dettaglio i 
+contenuti del libro di testo o di eventuali articoli, è invece necessario che vengano fornite informazioni 
+sufficienti a riprodurre il metodo utilizzato ed i risultati ottenuti. Eventuali porzioni riprese da altre fonti 
+devono essere evidenziate con le relative citazioni. La sottomissione va effettuata preferibilmente creando un 
+repository privato su codeberg con Project name “Nome Cognome” e condividendolo con l’utente ai-unifi (da project 
+information->members->invite members). In alternativa, è accettabile inviare per email a ai.unifi@pm.me un singolo 
+file zip (di dimensioni non superiori ad 1MB); tale file deve contenere solo i sorgenti e la relazione in pdf (senza 
+altri files binari).
 
 
 
@@ -63,65 +62,91 @@ for each variable in turn. The CONFLICTS function counts the number of constrain
 """
 
 
-def intersect(A, B, C, D):
-    pointA = shapely.Point(A[0], A[1])
-    pointB = shapely.Point(B[0], B[1])
-    pointC = shapely.Point(C[0], C[1])
-    pointD = shapely.Point(D[0], D[1])
-    S1 = LineString([pointA, pointB])
-    S2 = LineString([pointC, pointD])
+# s1:Line that already exist in the graph
+# s2. Line that we are creating between 2 points of the graph
 
-    intersection = shapely.intersection(S1, S2)
 
-    if intersection.is_empty:
-        return False
-    if intersection == pointA or intersection == pointB \
-            or intersection == pointC or intersection == pointD:
-        return False
-    return S1.intersects(S2)
+def line_intersects(existing_line, new_line, points):
+    existing_line_first = Point(existing_line.coords[0])
+    existing_line_last = Point(existing_line.coords[-1])
+    new_line_first = Point(new_line.coords[0])
+    new_line_last = Point(new_line.coords[-1])
+
+    intersection = shapely.intersection(existing_line, new_line)
+    # Check if the intersection is one of the points of the graph. if that is the case, we check if
+    # there is any connection between segments that generated such intersection and we return false
+    # if we find out that the 2 segment are connected by one of their endpoints. Otherwise, we return True
+    if any(intersection.equals(point) for point in points):
+        if existing_line_first.equals(new_line_first) or existing_line_first.equals(new_line_last) \
+                or existing_line_last.equals(new_line_first) or existing_line_last.equals(new_line_last):
+            return False
+        else:
+            return True
+    # Here we check if the line that we are creating passes through a point in the graph, excluding the points of
+    # the new line
+    all_points_except_endpoints = [point for point in points if
+                                   not (point.equals(new_line_first) or point.equals(new_line_last))]
+    if any(new_line.distance(point) < 0.0001 for point in all_points_except_endpoints):
+        return True
+
+    return existing_line.intersects(new_line)
+
 
 """
-Pseudocode of the algorithm that generates random map coloring problems.
-
-generate_random_csp(n) n: the number of variables in the csp problem.
-    points = n tuples of rand values in [0,1)
-    while points is not EMPTY:
-        random_point = random point in points
-        do
-            nearest_point = nearest point 
-
+Generate random instances of map-coloring problems as follows: scatter 
+n points on the unit square; select a point X at random, connect X by a straight line to the nearest point Y such that 
+X is not already connected to Y and the line crosses no other line; 
+repeat the previous step until no more connections are possible. 
+The points represent regions on the map and the lines connect neighbors. 
 """
-#np.delete( array, index)
+
+
 def generate_random_map_coloring_csp(n):
     created_constraints = []
-    created_variables = []
+
     points = np.random.random((n, 2))
+    shapely_points = [shapely.Point(point[0], point[1]) for point in points]
 
+    i = 0
+    calculate_distances = True
+    distances = []
+    while True:
+        if i > len(shapely_points) - 1:
+            break
+        if calculate_distances:
+            distances = [shapely_points[i].distance(other_point) for other_point in shapely_points]
+        distances[i] = np.inf
+        nearest_point = shapely_points[np.argmin(distances)]
+        expected_line = LineString([shapely_points[i], nearest_point])
 
+        if not any(line.equals(expected_line) or line_intersects(line, expected_line, shapely_points) for line in
+                   created_constraints):
+            created_constraints.append(expected_line)
+            i += 1
+            calculate_distances = True
+        else:
+            distances[shapely_points.index(nearest_point)] = np.inf
+            calculate_distances = False
 
+        if all(distance == np.inf for distance in distances):
+            i += 1
+            calculate_distances = True
 
-def min_distance(points, idx):
-    distances = np.linalg.norm(points - points[idx],
-                               axis=1)  # Calcola le distanze euclidee tra tutti i punti
-    distances[idx] = np.inf             # Escludi la distanza del punto selezionato stesso
-
-    min_index = np.argmin(distances)    # Ottieni l'indice del punto con la distanza minima
-
-    return min_index
-
-
-
+    return shapely_points, created_constraints
 
 
 def main():
-    A = (0, 0)
-    B = (0, 1)
-    C = (1, 1)
-    D = (3, 1)
-    print(intersect(A, B, C, D))
+    n = 50
+    created_variables, created_constraints = generate_random_map_coloring_csp(n)
+    print(created_variables, created_constraints)
 
-
-
+    xs = [point.x for point in created_variables]
+    ys = [point.y for point in created_variables]
+    for i in range(len(created_constraints)):
+        x, y = created_constraints[i].xy
+        plt.plot(x, y)
+    plt.scatter(xs, ys)
+    plt.show()
 
 
 if __name__ == '__main__':
