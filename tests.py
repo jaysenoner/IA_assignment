@@ -1,44 +1,89 @@
 from timeit import default_timer as timer
+import matplotlib.pyplot as plt
+
+from csp_generator import cspGenerator
 from map_coloring_csp import Map
 
+
 class Test:
-    def __init__(self, map_coloring_csp, average, colors):
-        self.csp = map_coloring_csp
+    def __init__(self, average, colors, max_steps):
+        self.csp = Map()
         self.average = average
         self.colors = colors
+        self.max_steps = max_steps
 
-    def test(self, increment, max_size):
-        for n in range(increment, max_size, increment):
-            pass
+    def test_and_plot(self, increment, max_size, solver):
+        xs, ys, percentage_solved = self.test_(increment, max_size, solver)
+        plt.plot(xs, ys)
+        plt.xlabel("Number of variables")
+        plt.ylabel("Time elapsed")
+        if solver == 0:
+            plt.title("min_conflicts on average of "
+                      + str(self.average) + " trials")
+        elif solver == 1:
+            plt.title("constraint weighting on average of "
+                      + str(self.average) + " trials")
+        print("Percentage of problems solved for each value of n", end="")
+        print(percentage_solved)
+        plt.show()
 
+    def test_(self, increment, max_size, solver):
+        time_array = []
+        percentage_array = []
+        for i, n in enumerate(range(increment, max_size + increment, increment)):
+            print("Progress:" + str(i))
+            if solver == 0:
+                time, percentage_solved = self.test_min_conflicts(n)
+            else:
+                time, percentage_solved = self.test_constraint_weighting(n)
+            time_array.append(time)
+            percentage_array.append(percentage_solved)
 
-    def test_min_conflicts(self, n, max_steps):
-        timeArray = []
+        dimension_array = list(range(increment, max_size + increment, increment))
+        return dimension_array, time_array, percentage_array
+
+    def test_min_conflicts(self, n):
+        time_array = []
         num_of_times_solved = 0
         for _ in range(self.average):
             self.csp.initialize_map(n)
             start = timer()
-            self.csp.min_conflicts(max_steps, self.colors)
+            self.csp.min_conflicts(self.max_steps, self.colors)
             end = timer()
             if self.csp.validateSolution():
                 num_of_times_solved += 1
-            timeArray.append(end - start)
+            time_array.append(end - start)
 
-        time_mean = sum(timeArray)/self.average
-        return time_mean, (num_of_times_solved/self.average) * 100
+        time_mean = sum(time_array) / self.average
+        return time_mean, (num_of_times_solved / self.average) * 100
 
-    def test_constraint_weighting(self, n, max_steps, weight_increment):
-        timeArray = []
+    def test_constraint_weighting(self, n, weight_increment=10):
+        time_array = []
         num_of_times_solved = 0
         for _ in range(self.average):
             self.csp.initialize_map(n)
             start = timer()
-            self.csp.constraint_weighting(max_steps, self.colors, weight_increment)
+            self.csp.constraint_weighting(self.max_steps, self.colors, weight_increment)
             end = timer()
             if self.csp.validateSolution():
                 num_of_times_solved += 1
-            timeArray.append(end - start)
+            time_array.append(end - start)
 
-        time_mean = sum(timeArray)/self.average
-        return time_mean, (num_of_times_solved/self.average) * 100
+        time_mean = sum(time_array) / self.average
+        return time_mean, (num_of_times_solved / self.average) * 100
 
+    def solve_and_print(self, n, solver, weight_increment=2):
+        points, lines = self.csp.initialize_map(n)
+        cspGenerator.plot_graphical_csp(points, lines, True)
+        self.csp.printMap()
+        print("\n")
+        if solver == 0:
+            self.csp.min_conflicts(self.max_steps, self.colors)
+        else:
+            self.csp.constraint_weighting(self.max_steps, self.colors, weight_increment)
+        if self.csp.validateSolution():
+            print("Solution found")
+            print("Solved map coloring CSP:")
+            self.csp.printMap(False)
+        else:
+            print("Solution not found")

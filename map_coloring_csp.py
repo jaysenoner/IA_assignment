@@ -95,3 +95,6 @@ class Map:
             region.color = min(colors, key=lambda color: sum(n.color == color for n in region.neighbors))
             weights[region] += weight_increment
         return None
+
+
+

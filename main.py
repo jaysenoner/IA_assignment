@@ -1,5 +1,4 @@
-from csp_generator import cspGenerator
-from map_coloring_csp import Map
+from tests import Test
 
 """Istruzioni:
 Il lavoro sarà oggetto di discussione durante l’esame orale e dovrà essere sottomesso almeno 48 ore 
@@ -59,22 +58,35 @@ number of constraints violated by a particular value, given the rest of the curr
 
 def main():
     colors = ["Red", "Green", "Blue"]
-    n = 20
-    csp = Map()
-    points, lines = csp.initialize_map(n)
-    cspGenerator.plot_graphical_csp(points, lines, True)
-    csp.printMap()
-    print()
-    print()
-    csp.constraint_weighting(1000, colors, 2)
 
-    if csp.validateSolution():
-        print("Solution found")
-        print("Solved map coloring CSP:")
-        csp.printMap(False)
-    else:
-        print("Solution not found")
+    """
+    Test parameters:
+    average: Number of trials executed for each value of the dimension of the csp.
+             When average is >1, each trial produces the average time of execution
+             Be aware that incereasing this parameter will also increase the running time
+             for the tests
+    colors: List of colors given to solve the map coloring csp 
+    max_steps: Value that assures the termination of both the min_conflicts and
+                the constraint weighting algorithm
+    """
+    test = Test(10, colors, 1000)
 
+    # n = 20
+    # test.solve_and_print(n, 0) Call this to see the generation of a new map coloring csp
+    #                            and print the solution of the generated problem
+    """
+    test_and_plot parameters:
+    increment: Starting dimension of the csp problem. Each time that a test is executed
+    the dimension of the problem is increased by this value
+    
+    max_size: Maximum size of the csp problem. When this value is reached, the 
+    test is terminated
+    
+    solver: solver == 0  -->  test the min_conflicts algorithm
+            solver == 1 --> test the constraint weighting algorithm
+    """
+    test.test_and_plot(10, 200, 0)
+    test.test_and_plot(10, 200, 1)
 
 if __name__ == '__main__':
     main()
