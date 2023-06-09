@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from csp_generator import cspGenerator
 from map_coloring_csp import Map
+from tabulate import tabulate
 
 
 class Test:
@@ -11,6 +12,26 @@ class Test:
         self.average = average
         self.colors = colors
         self.max_steps = max_steps
+
+    def test_all_and_plot(self, increment, max_size):
+        xs, ys, percentage_solved = self.test_(increment, max_size, 0)
+        plt.plot(xs, ys)
+        min_cf_ys = ys
+        print(percentage_solved)
+        xs, ys, percentage_solved = self.test_(increment, max_size, 1)
+        print(percentage_solved)
+        plt.plot(xs, ys)
+        plt.title("min conflicts and constraint weighting")
+        plt.xlabel("Number of variables")
+        plt.ylabel("Time elapsed")
+        plt.legend(["min_conflicts", "constraint-weighting"])
+        plt.show()
+        table = {"Dimensione CSP ": [round(value, 6) for value in xs],
+                 "min_conflicts(ms)": [round(value, 6) * 1000 for value in min_cf_ys],
+                 "constraint_weighting(ms)": [round(value, 6) * 1000 for value in ys]
+
+                 }
+        print(tabulate(table, headers='keys', tablefmt="latex_longtable"))
 
     def test_and_plot(self, increment, max_size, solver):
         xs, ys, percentage_solved = self.test_(increment, max_size, solver)

@@ -52,7 +52,7 @@ class cspGenerator:
         calculate_distances = True
         distances = []
         while True:
-            # print("progress:" + str(i)) Uncomment to show progress while creating graphical csp
+
             if i > len(shapely_points) - 1:
                 break
             if calculate_distances:
@@ -79,7 +79,7 @@ class cspGenerator:
         return shapely_points, created_constraints
 
     @staticmethod
-    def plot_graphical_csp(created_variables, created_constraints, show_labels):
+    def plot_graphical_csp(created_variables, created_constraints, show_labels=True):
 
         xs = [point.x for point in created_variables]
         ys = [point.y for point in created_variables]
